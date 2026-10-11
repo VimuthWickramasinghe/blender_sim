@@ -265,13 +265,24 @@ blender -b -P cli/blender_runner.py -- --solver cfd --resolution 128 128 64 --re
 
 ---
 
-### 3.5 Automated Reporting Engine (`cli/report_generator.py`)
-To accelerate scientific research, the tool generates publication-ready summaries:
-- **Metrics Table**: Step count, simulation runtime, CFL stability condition, peak temperature/velocity.
-- **Convergence Curves**: Loss / residual decay across iterations.
-- **Physical Invariants**: Total mass and thermal energy tracked over time to prove numerical stability.
-- **Visual Slices**: Matplotlib contour plots of 2D cross-sections.
-- **Render Gallery**: Previews of final photorealistic renders alongside raw mathematical heatmaps.
+### 3.5 Automated Dynamic Reporting & Video Export Engine (`cli/report_generator.py`)
+
+To streamline peer-reviewed publications and research dissemination, the framework generates dynamic, self-contained HTML research papers and synchronized EEVEE video renders:
+
+#### 1. Dynamic Interactive HTML Reports
+- **Interactive Responsive Charts (Chart.js / Plotly)**: Embedded client-side charts allowing researchers to hover, zoom, and inspect individual timesteps:
+  - Total mechanical / kinetic energy decay curves ($\Delta E_{kin}$).
+  - Friction-induced thermal buildup and temperature rise ($T(t)$).
+  - Sintering and caking bond count over time ($N_{bonds}(t)$).
+  - Residual convergence curves ($L_2$ norm decay) for CFD and FEA.
+- **Embedded Simulation Video Player**: Seamlessly embeds the rendered H.264 MP4 simulation animation with timeline scrubbing and playback speed controls.
+- **Physical Parameter & Material Cards**: Automatically tabulates material constants (Young's modulus, Poisson ratio, friction coefficients, thermal conductivity) and boundary conditions.
+- **Print / PDF Publication Stylesheet**: Integrated CSS print rules allowing direct conversion to publication-ready PDF documents (`Ctrl + P` / `window.print()`).
+
+#### 2. Synchronized EEVEE Real-Time Video Rendering (`blender_bridge/camera_render.py`)
+- **Automated Research Turntable Staging**: Automatically configures a 50mm focal length camera tracking the center of mass of the simulation domain.
+- **Hardware-Accelerated Encoding**: Exports 1080p / 4K 60 FPS animations directly using EEVEE rasterization and FFMPEG H.264 codecs.
+- **Multi-Angle & Split-Screen Video**: Generates synchronized multi-view videos (isometric, top-down, and cross-section false-color heatmap).
 
 ---
 
