@@ -245,6 +245,16 @@ The rendering architecture is strictly locked to **EEVEE** (EEVEE-Next in Blende
 
 ---
 
+### 3.8 Google Colab Cloud Processing Bridge (`cli/colab_bridge.py` & `colab/`)
+
+For computationally demanding multi-physics commissions (e.g., millions of DEM particles, fine 3D CFD meshes, or complex FEA inversions), the architecture supports offloading computation to Google Colab GPUs:
+- **Zero-Local-Hardware Constraints**: Leverages Google Colab's NVIDIA T4, A100, or L4 GPUs via CUDA/Taichi acceleration without heating up local laptops or workstations.
+- **Job Packager (`.simjob`)**: Compresses solver parameters, boundary geometry (`.obj`/`.ply`), and configuration JSON into an encrypted, lightweight archive.
+- **Headless Cloud Execution**: A dedicated notebook (`colab/simengine_worker.ipynb`) pulls the `.simjob`, runs the solver at maximum GPU throughput, and streams progress metadata back.
+- **Automated Cache Synchronization**: The resulting simulation caches (`.npz` arrays or OpenVDB files) are retrieved back to the local `cache/` directory, immediately binding to Blender's timeline for zero-latency EEVEE viewport playback.
+
+---
+
 ## 4. Community Developer Guide: Adding a Custom Solver
 
 To contribute a new solver (e.g., Wave Equation or Acoustic Simulation):

@@ -43,6 +43,10 @@ A modular, multi-physics simulation and scientific computing framework integrate
    - Generation of comprehensive scientific reports (Markdown, HTML, PDF/LaTeX) with loss curves, energy conservation metrics, velocity profiles, and temperature distribution plots.
    - Export of raw simulation datasets (HDF5, CSV, NPZ) for post-processing and peer-review publication.
 
+7. **Google Colab Cloud Processing Bridge**:
+   - One-click dispatch of compute-heavy simulations (DEM particles, high-res CFD) to free/Pro Google Colab GPUs (NVIDIA T4 / A100 / L4).
+   - Automated packaging of `.simjob` bundles, headless remote execution, and automatic cache retrieval back into Blender for instant EEVEE playback.
+
 ---
 
 ## 📁 Repository Layout
@@ -53,7 +57,10 @@ blender_sim/
 ├── auto_load.py               # Dynamic module registration system
 ├── blender_manifest.toml      # Blender 4.2+ extension manifest
 ├── README.md                  # Project overview and markdown documentation
+├── TIMELINE.md                # Development roadmap, phase sequence & Colab bridge
 ├── SYSTEM_ARCHITECTURE.md     # Detailed architecture and community developer guide
+├── colab/                     # Google Colab GPU cloud worker scripts & notebooks
+│   └── simengine_worker.ipynb # Headless GPU runner for offloaded simulation baking
 ├── Research/                  # Theoretical mathematics & PDE derivations repository
 │   ├── README.md              # Research document index and physical laws catalog
 │   ├── 01_cfd_mathematics.md  # Navier-Stokes, LBM (D2Q9/D3Q19), BGK collision derivations

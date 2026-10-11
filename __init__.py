@@ -14,7 +14,7 @@
 bl_info = {
     "name": "Simhelp",
     "author": "Vimuth Wickramasinghe",
-    "description": "",
+    "description": "This tool is for scientific purposes. All engineering mechanical simulations can be done, and thermal simulation can be done in this program, including BEM. ",
     "blender": (2, 80, 0),
     "version": (0, 0, 1),
     "location": "",
