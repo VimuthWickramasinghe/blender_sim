@@ -92,3 +92,40 @@ Non-equilibrium bounce-back resolves the unknown incoming distributions while pr
    $$\tau > 0.5$$
    For numerical stability in standard BGK. As $\tau \to 0.5$, viscosity $\nu \to 0$; for high Reynolds turbulence, Smagorinsky subgrid-scale turbulence models or Multiple Relaxation Time (MRT) models are employed.
 
+---
+
+## 5. OpenFOAM Finite Volume Method (FVM) Formulation
+
+While LBM operates on mesoscopic lattice velocity distributions, OpenFOAM solves the continuum macroscopic Navier-Stokes equations discretized over arbitrary polyhedral control volumes $V_P$:
+
+### 5.1 Integral Form over Control Volume $V_P$
+$$\int_{V_P} \frac{\partial (\rho \phi)}{\partial t} dV + \int_{\partial V_P} (\rho \mathbf{u} \phi) \cdot d\mathbf{S} = \int_{\partial V_P} (\Gamma_\phi \nabla \phi) \cdot d\mathbf{S} + \int_{V_P} S_\phi dV$$
+Where $\phi \in \{1, u, v, w, T, k, \omega\}$ is the transported scalar or vector quantity, and $\Gamma_\phi$ is the diffusion coefficient.
+
+Summing over face areas $\mathbf{S}_f = \hat{\mathbf{n}}_f A_f$:
+$$\frac{\partial (\rho \phi)_P}{\partial t} V_P + \sum_f F_f \phi_f = \sum_f \Gamma_{\phi, f} (\nabla \phi)_f \cdot \mathbf{S}_f + S_\phi V_P$$
+Where $F_f = \rho_f \mathbf{u}_f \cdot \mathbf{S}_f$ is the convective mass flux through face $f$.
+
+### 5.2 Pressure-Velocity Coupling (SIMPLE & PISO)
+Because the incompressible continuity equation ($\nabla \cdot \mathbf{u} = 0$) lacks a direct pressure time derivative, OpenFOAM couples velocity and pressure via Poisson pressure equations:
+
+1. **Semi-Discretized Momentum Equation**:
+   $$a_P \mathbf{u}_P = \mathbf{H}(\mathbf{u}) - \nabla p \implies \mathbf{u}_P = \frac{\mathbf{H}(\mathbf{u})}{a_P} - \frac{1}{a_P}\nabla p$$
+   Where $\mathbf{H}(\mathbf{u}) = -\sum_{N} a_N \mathbf{u}_N + \mathbf{S}_{\mathbf{u}}$.
+2. **Pressure Poisson Equation**:
+   Substituting $\mathbf{u}$ into continuity $\nabla \cdot \mathbf{u} = 0$:
+   $$\nabla \cdot \left( \frac{1}{a_P} \nabla p \right) = \nabla \cdot \left( \frac{\mathbf{H}(\mathbf{u})}{a_P} \right)$$
+   - **SIMPLE (Semi-Implicit Method for Pressure-Linked Equations)**: Used in `simpleFoam` for steady-state flows.
+   - **PISO / PIMPLE**: Used in `pimpleFoam` for transient, large-timestep simulations.
+
+### 5.3 Turbulence Modeling: Two-Equation $k-\omega$ SST Model
+The Shear Stress Transport ($k-\omega$ SST) formulation combines the accuracy of the Wilcox $k-\omega$ model near boundary-layer walls with the robust $k-\epsilon$ model in the free stream:
+
+$$\frac{\partial (\rho k)}{\partial t} + \nabla \cdot (\rho \mathbf{u} k) = \nabla \cdot \left[ (\mu + \sigma_k \mu_t)\nabla k \right] + \tilde{P}_k - \beta^* \rho k \omega$$
+$$\frac{\partial (\rho \omega)}{\partial t} + \nabla \cdot (\rho \mathbf{u} \omega) = \nabla \cdot \left[ (\mu + \sigma_\omega \mu_t)\nabla \omega \right] + \alpha \frac{\rho}{\mu_t}\tilde{P}_k - \beta \rho \omega^2 + 2(1 - F_1)\rho \sigma_{\omega 2}\frac{1}{\omega}\nabla k \cdot \nabla \omega$$
+
+Turbulent kinematic eddy viscosity:
+$$\nu_t = \frac{\mu_t}{\rho} = \frac{a_1 k}{\max(a_1 \omega, S F_2)}$$
+Where $F_1, F_2$ are blending functions and $S = \sqrt{2 \mathbf{S}_{ij}\mathbf{S}_{ij}}$ is the strain rate magnitude.
+
+

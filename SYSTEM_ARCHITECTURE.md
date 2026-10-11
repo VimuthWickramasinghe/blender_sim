@@ -24,39 +24,48 @@ flowchart TD
         B_UI["Blender N-Panel UI<br>(Quick Viewport Controls)"]
     end
 
-    subgraph Config["2. Job Configuration"]
+    subgraph Prep["2. Visual 3D Model Preparation & Pre-Processing (prep/)"]
+        INSPECT["Visual Mesh Health Inspector<br>(Manifold, Intersections, Inverted Normals)"]
+        CLEAN["Automated Geometry Healer & Defeature<br>(Hole Filling, Decimation, Small Feature Removal)"]
+        BOUNDARY["Interactive Boundary Surface Tagger<br>(Inlets, Outlets, Walls, Heat Flux, Symmetry)"]
+        DOMAIN["Domain & Enclosure Generator<br>(Internal Fluid Inversion, Wind Tunnel, Bounding Box)"]
+        SDF_GEN["Signed Distance Field (SDF) & Voxelizer<br>(High-Speed DEM/LBM Particle Collisions)"]
+    end
+
+    subgraph Config["3. Job Configuration"]
         JSON_CFG["Config File / Node Tree State<br>(Domains, Boundaries, Physics Constants)"]
     end
 
-    subgraph Core["3. Numerical Physics Core (solvers/)"]
+    subgraph Core["4. Numerical Physics Core (solvers/)"]
         BASE["BaseSolver Abstract Class"]
-        CFD["CFD Solver (LBM / Navier-Stokes)"]
+        CFD["CFD Solver (LBM / OpenFOAM)"]
         THERMAL["Thermal Solver (Heat Diffusion)"]
         SPH["Particle Solver (SPH / DEM)"]
         FEA["Stress/FEA Solver (Linear Elasticity)"]
     end
 
-    subgraph Math["4. Scientific Computing Backends"]
+    subgraph Math["5. Scientific Computing Backends"]
         NUMPY["NumPy / SciPy (Vectorized CPU)"]
         TAICHI["Taichi / CUDA (GPU Acceleration)"]
         NUMBA["Numba JIT (Compiled Loops)"]
     end
 
-    subgraph Bridge["5. Blender Data Bridge (blender_bridge/)"]
+    subgraph Bridge["6. Blender Data Bridge (blender_bridge/)"]
         ATTR["Mesh Attributes & Color Ramps"]
         CACHE["Cache Manager (VDB / Alembic / NPZ)"]
         GN["Geometry Nodes Visualizers (Vectors/Scalars)"]
     end
 
-    subgraph Output["6. Scientific & Visual Output"]
+    subgraph Output["7. Scientific & Visual Output"]
         RENDER["EEVEE Real-Time Render Engine<br>(Instant Viewport & Fast Batch Sequences)"]
         REPORT["Automated Report Generator<br>(Markdown / HTML / LaTeX / Plots)"]
         DATA["Raw Scientific Data Export<br>(HDF5 / CSV / NPZ)"]
     end
 
+    NODE_ED --> PREP
+    B_UI --> PREP
+    PREP --> JSON_CFG
     CLI --> JSON_CFG
-    NODE_ED --> JSON_CFG
-    B_UI --> JSON_CFG
     JSON_CFG --> BASE
     BASE --> CFD & THERMAL & SPH & FEA
     CFD & THERMAL & SPH & FEA --> NUMPY & TAICHI & NUMBA
@@ -98,10 +107,15 @@ class BaseSolver(ABC):
 
 #### Supported & Roadmap Simulation Types:
 1. **Fluid Dynamics & Aerodynamics (CFD)**:
-   - **Lattice Boltzmann Method (LBM)**: D2Q9 / D3Q19 / D3Q27 lattice formulations for high-throughput GPU fluid simulations.
-   - **Navier-Stokes Solvers**: Incompressible & compressible finite-difference/finite-volume schemes for internal/external aerodynamics.
+   - **Lattice Boltzmann Method (LBM)** (`solvers/cfd_lbm.py`): D2Q9 / D3Q19 / D3Q27 lattice formulations for high-throughput GPU fluid simulations via Taichi.
+   - **OpenFOAM Enterprise CFD Bridge** (`solvers/cfd_openfoam.py`):
+     - Complete pipeline integration with OpenFOAM (v2312+ / OpenFOAM 11).
+     - Automated generation of OpenFOAM case structures (`0/`, `constant/`, `system/` dictionary generation from JSON/Node inputs).
+     - Automated meshing via `blockMesh` and `snappyHexMesh` from Blender domain geometries.
+     - Execution of industrial solvers: `simpleFoam` (steady incompressible), `pimpleFoam` (transient turbulent), `interFoam` (two-phase VOF free surface), and `chtMultiRegionFoam` (conjugate heat transfer).
+     - Native ingestion of computed fields (`U`, `p`, `k`, `omega`, `alpha.water`) via `fluidfoam` and `meshio` into Blender mesh attributes and OpenVDB volumes.
    - **Multiphase Flows**: Volume-of-Fluid (VOF) and Level Set methods for liquid-gas interfaces and surface tension.
-   - **Aerodynamic Analysis**: Drag/lift coefficients, boundary layer formation, and vortex shedding.
+   - **Aerodynamic Analysis**: Automated calculation of drag ($C_d$) and lift ($C_l$) coefficients, boundary layer formation, and vortex shedding.
 
 2. **Thermal & Thermodynamics**:
    - **Conduction**: Transient and steady-state heat equation ($\frac{\partial T}{\partial t} = \alpha \nabla^2 T + Q$).
@@ -137,7 +151,74 @@ class BaseSolver(ABC):
 
 ---
 
-### 3.2 Blender Data Bridge (`blender_bridge/`)
+### 3.2 Visual 3D Model Preparation & Pre-Processing Pipeline (`prep/`)
+
+Raw 3D models (visual CGI meshes, CAD imports, 3D scans) often contain severe defects that cause simulation failures or non-convergence (non-manifold edges, self-intersections, inverted normals, unsealed holes, excessive polygon density). The **Visual 3D Model Preparation Pipeline** provides specialized in-viewport tools to inspect, repair, tag, and discretize models before passing them to the physics solvers:
+
+```
+[Raw 3D Asset / CAD Import]
+            │
+            ▼
+┌──────────────────────────────────────┐
+│ 1. Mesh Health & Manifold Inspector  │ ──> Highlight non-manifold edges, self-intersections, flipped normals
+└──────────────────────────────────────┘
+            │
+            ▼
+┌──────────────────────────────────────┐
+│ 2. Automated Healer & Defeaturing    │ ──> Hole capping, normal recalculation, feature suppression
+└──────────────────────────────────────┘
+            │
+            ▼
+┌──────────────────────────────────────┐
+│ 3. Interactive Boundary Surface Tag  │ ──> Click & assign Inlets, Outlets, Walls, Dirichlet/Neumann faces
+└──────────────────────────────────────┘
+            │
+            ▼
+┌──────────────────────────────────────┐
+│ 4. Domain & Enclosure Generator      │ ──> Inverse fluid volume extraction, Wind tunnels, DEM hoppers
+└──────────────────────────────────────┘
+            │
+            ▼
+┌──────────────────────────────────────┐
+│ 5. SDF Voxelizer & Conformal Mesher  │ ──> 3D Signed Distance Fields (DEM/LBM) or Conformal Tet mesh (FEA)
+└──────────────────────────────────────┘
+            │
+            ▼
+   [Ready for Simulation Solvers]
+```
+
+#### 1. Visual Mesh Health & Manifold Inspector (`prep/mesh_inspector.py`)
+- **Non-Manifold Detection**: Highlights edges shared by $>2$ faces, open boundaries, and isolated vertices using custom colored viewport overlays (red edges for open boundaries, yellow for non-manifold junctions).
+- **Self-Intersection & Overlap Analysis**: Employs spatial bounding-volume hierarchies (BVH) via `trimesh` to detect intersecting coplanar faces and self-penetrating shells.
+- **Normal Consistency Check**: Visually flags inverted surface normals with color-coded front/back face orientation highlights.
+
+#### 2. Automated Geometry Healer & Defeaturing (`prep/geometry_healer.py`)
+- **Watertight Solid Capping**: Automatically detects open boundary loops and computes planar or minimum-area triangle fan capping to seal fluid domains and DEM containers.
+- **Normal Unification**: Re-orients all mesh polygon normals consistently outward with one click.
+- **Geometric Defeaturing**: Removes non-essential CAD details (micro-fillets, tiny bolt holes, chamfers) that unnecessarily inflate grid resolutions or cause tiny time steps ($CFL$).
+- **Curvature-Adaptive Decimation & Remeshing**: Employs Quadric Error Metric (QEM) decimation to reduce polygon count on flat planar regions while retaining high vertex density around high-curvature aerodynamic surfaces.
+
+#### 3. Interactive Boundary Surface Tagger (`prep/boundary_tagger.py`)
+- **Face Selection & Tagging Tool**: Allows users to select faces or face loops in the 3D Viewport and assign physical boundary types with interactive color badges:
+  - **Fluid Boundaries**: Velocity Inlet (Blue), Pressure Outlet (Orange), No-Slip Wall (Gray), Slip / Symmetry Plane (Green).
+  - **Thermal Boundaries**: Constant Temperature / Dirichlet (Red), Prescribed Heat Flux / Neumann (Yellow), Convective Cooling / Robin (Cyan).
+  - **Structural Boundaries**: Fixed Constraint / Encastre (Purple), Roller / Pin (Pink), Surface Traction / Pressure Load (Amber).
+- **Metadata Storage**: Boundary tags are stored directly in Blender mesh vertex groups / face attributes (`face.attributes['sim_boundary_tag']`) for zero-loss export to JSON, OpenFOAM dictionary files, or DEM solver setups.
+
+#### 4. Computational Domain & Enclosure Generator (`prep/domain_generator.py`)
+- **Internal Fluid Domain Inversion**: Given an assembly of pipes, valves, or engine blocks, automatically inverts the geometry and generates the negative watertight internal fluid volume.
+- **External Wind Tunnel Enclosure**: Automatically wraps vehicles, airfoils, or buildings inside standard aerodynamic virtual wind tunnels with configurable upstream, downstream, and lateral clearances based on model bounding length ($L_{char}$).
+- **DEM Container & Hopper Builder**: Rapidly generates parameterized physical hoppers, chutes, rotary drums, and conveyor geometries for granular particle flow.
+
+#### 5. Signed Distance Field (SDF) & Voxelizer (`prep/voxelizer_sdf.py`)
+- **High-Speed GPU Collision Representation**: For DEM particle simulations and LBM fluid obstacles, converts arbitrary 3D surface meshes into continuous 3D Signed Distance Fields $\Phi(\mathbf{x}) = \pm \text{dist}(\mathbf{x}, \partial \Omega)$:
+  - Negative values inside the obstacle, positive values outside.
+  - Enables sub-microsecond contact normal and penetration depth evaluation ($\hat{\mathbf{n}} = \nabla \Phi / \|\nabla \Phi\|$, $\delta_n = -\Phi$) without querying thousands of polygon faces.
+- **Voxel Grid Discretization**: Generates discrete obstacle masks for Lattice Boltzmann fluid grids (fluid vs bounce-back solid nodes).
+
+---
+
+### 3.3 Blender Data Bridge (`blender_bridge/`)
 The Blender Data Bridge is responsible for zero-copy or minimal-overhead data synchronization between scientific Python arrays and Blender's data structures:
 
 1. **Mesh Attribute Injection (`mesh_attributes.py`)**:
@@ -152,7 +233,7 @@ The Blender Data Bridge is responsible for zero-copy or minimal-overhead data sy
 
 ---
 
-### 3.3 Command-Line Interface (CLI) & Headless Commissioning (`cli/`)
+### 3.4 Command-Line Interface (CLI) & Headless Commissioning (`cli/`)
 
 The CLI enables fully automated, remote, or scripted execution.
 
@@ -184,7 +265,7 @@ blender -b -P cli/blender_runner.py -- --solver cfd --resolution 128 128 64 --re
 
 ---
 
-### 3.4 Automated Reporting Engine (`cli/report_generator.py`)
+### 3.5 Automated Reporting Engine (`cli/report_generator.py`)
 To accelerate scientific research, the tool generates publication-ready summaries:
 - **Metrics Table**: Step count, simulation runtime, CFL stability condition, peak temperature/velocity.
 - **Convergence Curves**: Loss / residual decay across iterations.
@@ -194,7 +275,7 @@ To accelerate scientific research, the tool generates publication-ready summarie
 
 ---
 
-### 3.5 Dedicated In-Blender Simulation Editor (`editor/` & `nodes/`)
+### 3.6 Dedicated In-Blender Simulation Editor (`editor/` & `nodes/`)
 
 To provide researchers and artists with an intuitive, non-cluttered workflow, the system introduces a **dedicated Simulation Editor** inside Blender:
 
@@ -219,7 +300,7 @@ Blender’s native Node Editor is extended with a custom tree type: `SimNodeTree
 
 ---
 
-### 3.6 Blender Add-on UI Integration (`ui/`)
+### 3.7 Blender Add-on UI Integration (`ui/`)
 For quick adjustments without opening the full node editor:
 - **N-Panel (`SimEngine`)**:
   - **Quick Setup**: Apply preset configurations (e.g., Wind Tunnel, Heated Fin, Water Dam Break).
@@ -231,7 +312,7 @@ For quick adjustments without opening the full node editor:
 
 ---
 
-### 3.7 Dedicated EEVEE Real-Time Rendering Pipeline (`blender_bridge/camera_render.py`)
+### 3.8 Dedicated EEVEE Real-Time Rendering Pipeline (`blender_bridge/camera_render.py`)
 
 The rendering architecture is strictly locked to **EEVEE** (EEVEE-Next in Blender 4.2+ LTS) to deliver instantaneous visual inspection and fast batch exports:
 - **Zero Offline Path-Tracing Bottlenecks**: Cycles requires path-traced samples, taking seconds or minutes per frame. EEVEE executes rasterized shader passes on the GPU in **tens of milliseconds per frame**.
@@ -245,7 +326,7 @@ The rendering architecture is strictly locked to **EEVEE** (EEVEE-Next in Blende
 
 ---
 
-### 3.8 Google Colab Cloud Processing Bridge (`cli/colab_bridge.py` & `colab/`)
+### 3.9 Google Colab Cloud Processing Bridge (`cli/colab_bridge.py` & `colab/`)
 
 For computationally demanding multi-physics commissions (e.g., millions of DEM particles, fine 3D CFD meshes, or complex FEA inversions), the architecture supports offloading computation to Google Colab GPUs:
 - **Zero-Local-Hardware Constraints**: Leverages Google Colab's NVIDIA T4, A100, or L4 GPUs via CUDA/Taichi acceleration without heating up local laptops or workstations.
@@ -342,4 +423,53 @@ To transform Blender from a polygonal visual asset modeler into a full engineeri
   2. Regenerates conformal mesh for simulation domain.
   3. Re-runs simulation commission via CLI or background worker.
   4. Updates research metrics and render outputs in an automated design optimization loop (CAD $\to$ Sim $\to$ Report $\to$ Optimize).
+
+---
+
+## 7. Complete Software & Python Package Ecosystem
+
+The complete set of dependencies required across all simulation and modeling phases is categorized below:
+
+### 7.1 Core Mathematics & Scientific Arrays
+- `numpy`: Multi-dimensional array structures, tensor calculus, vectorized grid physics.
+- `scipy`: Sparse matrix solvers (`scipy.sparse.linalg`), spatial search trees (`cKDTree`), ODE integrators (`scipy.integrate`).
+- `sympy`: Symbolic algebra, exact differential operators, and analytical Jacobian matrix derivation.
+
+### 7.2 High-Performance GPU Acceleration & JIT
+- `taichi`: Embedded high-performance domain-specific parallel programming on GPU/CPU (CUDA, Vulkan, Apple Metal, multi-core CPU). Essential for fast DEM particle interactions and LBM fluid grids.
+- `numba`: LLVM-based Just-In-Time (JIT) compiler for multi-threaded CPU computational kernels (`@njit(parallel=True)`).
+- `cupy-cuda12x` / `torch` (PyTorch): Optional CUDA array manipulation and tensor acceleration.
+
+### 7.3 OpenFOAM CFD & External Computational Suites
+- **OpenFOAM** (v2312+ or OpenFOAM 11): Industrial-grade Finite Volume Navier-Stokes suite.
+- `fluidfoam`: Native Python reader and parser for OpenFOAM mesh and field output files.
+- `PyFoam`: Python orchestration library for case directory generation, dictionary manipulation, and solver log monitoring.
+- `meshio`: Universal mesh format converter (translating Blender meshes to OpenFOAM `polyMesh`, Gmsh, and VTK).
+- `pyvista` / `vtk`: Scientific 3D data pipeline and VTK post-processing.
+
+### 7.4 Particle Dynamics & Spatial Partitioning (Phase 1: DEM)
+- `scipy.spatial`: `cKDTree` and Delaunay tessellation for high-speed neighbor searches.
+- `trimesh`: Surface geometry inspection, watertight validation, and signed distance fields (SDF) for particle-wall collisions.
+
+### 7.5 Scientific Caching & Volumetric Formats
+- `pyopenvdb` / `openvdb`: VDB volumetric grid generation for fluid densities, velocities, and level sets.
+- `h5py`: Hierarchical scientific HDF5 format for large simulation trajectory storage.
+- `pyarrow`: High-performance binary columnar data transport.
+
+### 7.6 Scientific Research Reporting & Automated Graphics
+- `matplotlib`: Publication-quality convergence curves, residual decays, and 2D isothermal/streamline slices.
+- `seaborn`: Statistical distribution plots for particle velocities, force distributions, and parameter sweep comparisons.
+- `jinja2`: HTML/Markdown report templating.
+- `weasyprint` / `reportlab`: Automated compilation into PDF research publications.
+
+### 7.7 Google Colab Cloud Processing Bridge
+- `requests` / `httpx`: High-speed HTTP communication for job dispatch.
+- `pydantic`: Strict data validation and schema definitions for `.simjob` bundles.
+- `pyngrok` / `cloudflared`: Secure tunneling to active Colab cloud workers.
+
+### 7.8 Robotics & Native CAD Modeling (Phases 5 & 6)
+- `pinocchio` / `yourdfpy`: Fast rigid multibody dynamics, URDF parsing, and analytical kinematics.
+- `build123d` / `cadquery`: OpenCASCADE (OCCT) Python engine for exact B-Rep solid CAD modeling.
+- `gmsh`: Python API for automatic 3D tetrahedral/hexahedral conformal meshing.
+
 

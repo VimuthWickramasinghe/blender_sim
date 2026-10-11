@@ -7,7 +7,7 @@ A modular, multi-physics simulation and scientific computing framework integrate
 ## 🔬 Core Capabilities
 
 1. **Multi-Physics & Engineering Solvers via Python & Math Libraries**:
-   - **Computational Fluid Dynamics (CFD)**: Lattice Boltzmann Method (LBM), Navier-Stokes solvers, multiphase flows, and aerodynamic drag/lift analysis.
+   - **Computational Fluid Dynamics (CFD)**: Lattice Boltzmann Method (LBM) for high-speed GPU fluids and **OpenFOAM** integration (industrial-grade Finite Volume Navier-Stokes, turbulence $k-\epsilon$/$k-\omega$ SST, multiphase `interFoam`, and aerodynamics).
    - **Robotics & Multibody Dynamics (MBD)**: Articulated rigid/flexible chains, URDF/SDF/MJCF import, forward/inverse kinematics (FK/IK), actuator PID control loops, and synthetic sensor emulation (LiDAR, depth camera, IMU).
    - **Mechanical Stress & FEA**: Linear/non-linear elasticity, strain/stress tensors (von Mises), modal vibration, and contact mechanics.
    - **Thermal Simulation**: Conduction, natural/forced convection (Boussinesq), radiation, and phase change.
@@ -22,28 +22,35 @@ A modular, multi-physics simulation and scientific computing framework integrate
    - **Parametric Constraint Sketcher**: 2D constraint solving (coincident, tangent, dimensions) and parametric feature trees (extrude, revolve, fillet).
    - **Direct Conformal Meshing**: Automatic tetrahedral/hexahedral meshing directly from CAD solids for FEA/CFD domains (Gmsh/Netgen).
 
-3. **Dedicated Simulation Editor & Custom Node System**:
+3. **Visual 3D Model Preparation & Pre-Processing Pipeline**:
+   - **Mesh Health & Manifold Inspector**: Real-time viewport overlay highlighting non-manifold edges, self-intersections, unsealed boundary holes, and flipped normals.
+   - **Automated Geometry Healer & Defeaturing**: Hole-capping algorithms, normal recalculation, and small-feature suppression.
+   - **Interactive Boundary Surface Tagger**: Click-to-tag faces in the 3D viewport with physical boundary colors (Inlets, Outlets, Walls, Heat Flux, Encastre supports).
+   - **Computational Domain Generator**: Inverse internal fluid volume extraction, aerodynamic wind tunnel enclosures, and DEM hoppers.
+   - **Signed Distance Field (SDF) Voxelizer**: Generates continuous 3D distance fields for ultra-fast GPU collision queries in DEM and LBM.
+
+4. **Dedicated Simulation Editor & Custom Node System**:
    - Custom **SimEngine Node Tree** editor directly inside Blender's Node Editor window (`SimNodeTree`).
    - Visually assemble simulation graphs with specialized nodes for domains, solvers (CFD, Heat, SPH, Robotics, FEA), boundary conditions, force fields, and cache exporters.
    - Dedicated one-click **SimEngine Studio Workspace** pairing the 3D Viewport with the Simulation Node Editor, graph monitors, and simulation control deck.
 
-4. **Headless Command-Line Interface (CLI)**:
+5. **Headless Command-Line Interface (CLI)**:
    - Run complete simulation commissions without opening the Blender GUI.
    - Parameter sweeping, batch experimentation, and reproducible scientific workflows.
    - Remote cluster and workstation execution support.
 
-5. **Blender Data & Viewport Bridge**:
+6. **Blender Data & Viewport Bridge**:
    - Dynamic caching into open formats (OpenVDB, Alembic ABC, PLY, NumPy arrays).
    - Direct mesh attribute binding (Geometry Nodes, vertex colors, velocity vector visualizers, temperature scalar fields).
    - Point cloud and volume generation for real-time viewport preview and instant EEVEE rendering.
 
-6. **Automated Research Reporting & Media Generation (EEVEE Only)**:
+7. **Automated Research Reporting & Media Generation (EEVEE Only)**:
    - Ultra-fast batch rendering using **EEVEE** (sub-second per-frame animation export without slow path-tracing bake times).
    - Automated rendering of animation sequences and turntable camera views at 60+ FPS viewport capability.
    - Generation of comprehensive scientific reports (Markdown, HTML, PDF/LaTeX) with loss curves, energy conservation metrics, velocity profiles, and temperature distribution plots.
    - Export of raw simulation datasets (HDF5, CSV, NPZ) for post-processing and peer-review publication.
 
-7. **Google Colab Cloud Processing Bridge**:
+8. **Google Colab Cloud Processing Bridge**:
    - One-click dispatch of compute-heavy simulations (DEM particles, high-res CFD) to free/Pro Google Colab GPUs (NVIDIA T4 / A100 / L4).
    - Automated packaging of `.simjob` bundles, headless remote execution, and automatic cache retrieval back into Blender for instant EEVEE playback.
 
@@ -61,6 +68,13 @@ blender_sim/
 ├── SYSTEM_ARCHITECTURE.md     # Detailed architecture and community developer guide
 ├── colab/                     # Google Colab GPU cloud worker scripts & notebooks
 │   └── simengine_worker.ipynb # Headless GPU runner for offloaded simulation baking
+├── prep/                      # Visual 3D model preparation & geometry pre-processing
+│   ├── __init__.py
+│   ├── mesh_inspector.py      # Manifoldness, self-intersections, flipped normals check
+│   ├── geometry_healer.py     # Watertight hole capping, normal healing, defeaturing
+│   ├── boundary_tagger.py     # Interactive face selection & physical boundary tagging
+│   ├── domain_generator.py    # Inverse fluid cavities, wind tunnels, DEM hoppers
+│   └── voxelizer_sdf.py       # Signed Distance Fields & discrete voxelization
 ├── Research/                  # Theoretical mathematics & PDE derivations repository
 │   ├── README.md              # Research document index and physical laws catalog
 │   ├── 01_cfd_mathematics.md  # Navier-Stokes, LBM (D2Q9/D3Q19), BGK collision derivations
@@ -101,14 +115,40 @@ blender_sim/
 
 ## 🚀 Quickstart & CLI Commissioning
 
-### 1. Requirements
-- Blender 4.2 LTS or newer
-- Python 3.10+ (Blender bundled Python or system environment)
-- Core Python libraries:
-  ```bash
-  pip install numpy scipy matplotlib meshio h5py
-  ```
-  *(Optional GPU acceleration: `pip install taichi numba`)*
+### 1. Requirements & Complete Package Suite
+
+- **Blender**: 4.2 LTS or newer (with bundled Python 3.10+)
+- **External Solvers**: [OpenFOAM](https://openfoam.org/ / https://www.openfoam.com/) (v2312 or newer / OpenFOAM 11) for advanced CFD, installed locally or in Google Colab/WSL.
+
+#### Complete Python Package Suite:
+
+```bash
+# 1. Core Mathematical & Scientific Stack
+pip install numpy scipy sympy
+
+# 2. High-Performance GPU Acceleration & JIT
+pip install taichi numba
+# Optional CUDA accelerated tensor arrays:
+# pip install cupy-cuda12x torch
+
+# 3. Particle Simulation & Spatial Partitioning (Phase 1: DEM)
+pip install trimesh
+
+# 4. OpenFOAM CFD Bridge & Mesh Processing
+pip install fluidfoam PyFoam meshio pyvista vtk
+
+# 5. Caching & Volumetric Data
+pip install h5py pyarrow pyopenvdb
+
+# 6. Scientific Reporting & Data Visualization
+pip install matplotlib seaborn jinja2 weasyprint
+
+# 7. Google Colab Cloud Processing Bridge
+pip install requests pydantic httpx pyngrok
+
+# 8. Robotics & Native CAD Modeling (Phases 5 & 6)
+# pip install pinocchio yourdfpy build123d gmsh
+```
 
 ### 2. Running Simulations via Command Line (Headless)
 Run a thermal diffusion commission and automatically render frames:

@@ -37,6 +37,11 @@ flowchart LR
   - [ ] Tangential force with Mindlin-Deresiewicz compliance and Coulomb sliding friction ($\mu |F_n|$).
   - [ ] Spatial partitioning: Fast neighbor search via Uniform Spatial Grid / Linked-Cell binning in NumPy/Taichi.
   - [ ] Time integration: Velocity-Verlet symplectic integrator for energy conservation.
+* **Visual 3D Model Preparation Tools (prep/)**:
+  - [ ] `prep/mesh_inspector.py`: Viewport overlay highlighting non-manifold edges, open boundaries, and flipped normals.
+  - [ ] `prep/geometry_healer.py`: Automated watertight hole capping, normal re-orientation, and defeaturing for containers/hoppers.
+  - [ ] `prep/boundary_tagger.py`: Interactive 3D face tagger to designate collider boundaries, emitters, and obstacle friction properties.
+  - [ ] `prep/voxelizer_sdf.py`: GPU Signed Distance Field (SDF) generator for sub-microsecond particle-mesh collision queries.
 * **Blender Data Bridge & EEVEE Visualization**:
   - [ ] `blender_bridge/particle_pointcloud.py`: Convert simulation positions to Blender Point Clouds / Particle instances.
   - [ ] Real-time attribute binding: particle velocity magnitude, contact force intensity, kinetic energy.
@@ -67,18 +72,21 @@ flowchart LR
 ---
 
 ### Phase 3: CFD (Computational Fluid Dynamics) Simulation Tool
-**Focus**: Aerodynamics and fluid flow via high-throughput Lattice Boltzmann Method.
+**Focus**: Dual-engine CFD — High-throughput GPU Lattice Boltzmann Method (LBM) + Industrial-grade **OpenFOAM** integration.
 
-* **Core Numerical Engine**:
-  - [ ] Implement `solvers/cfd_lbm.py` (D2Q9 in 2D, D3Q19 in 3D).
-  - [ ] BGK single relaxation time collision operator with Maxwell-Boltzmann equilibrium.
-  - [ ] Boundary conditions: Half-way bounce-back (no-slip obstacles) and Zou-He velocity/pressure boundaries.
+* **Core Numerical Engines**:
+  - [ ] **LBM Solver (`solvers/cfd_lbm.py`)**: D2Q9 / D3Q19 BGK solver with bounce-back and Zou-He boundaries for real-time GPU fluid flow.
+  - [ ] **OpenFOAM Bridge (`solvers/cfd_openfoam.py`)**:
+    - [ ] Automated case directory generator (`0/`, `constant/`, `system/` files from Node Tree configuration).
+    - [ ] Geometry meshing bridge using `blockMesh` and `snappyHexMesh` via `meshio`.
+    - [ ] Solver integration: `simpleFoam` (steady turbulent), `pimpleFoam` (transient aerodynamic), `interFoam` (two-phase free surface VOF), and `chtMultiRegionFoam` (conjugate heat transfer).
+    - [ ] Native output parser using `fluidfoam` and `pyvista` for reading pressure $p$, velocity $\mathbf{U}$, and turbulence fields ($k$, $\omega$, $\epsilon$).
   - [ ] Multiphase flows (Volume-of-Fluid / Level Set) and natural convection coupling (Boussinesq buoyancy).
 * **Blender & EEVEE Bridge**:
   - [ ] Velocity vector arrows and streamlines via Geometry Nodes.
   - [ ] OpenVDB cache export for real-time smoke and vorticity volume visualization in EEVEE.
 * **CLI & Reporting**:
-  - [ ] Automated calculation of drag ($C_d$) and lift ($C_l$) coefficients, pressure drops, and velocity field plots.
+  - [ ] Automated calculation of drag ($C_d$) and lift ($C_l$) coefficients, pressure drops, OpenFOAM residual monitoring, and velocity field plots.
 
 ---
 

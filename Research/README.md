@@ -8,7 +8,7 @@ This directory contains the theoretical foundations, governing partial different
 
 | Document | Topic | Key Formulations & Physics |
 | :--- | :--- | :--- |
-| **[01_cfd_mathematics.md](01_cfd_mathematics.md)** | Computational Fluid Dynamics | Navier-Stokes equations, Lattice Boltzmann Method (LBM D2Q9/D3Q19), BGK collision, Chapman-Enskog expansion, boundary bounce-back. |
+| **[01_cfd_mathematics.md](01_cfd_mathematics.md)** | Computational Fluid Dynamics | Navier-Stokes equations, LBM (D2Q9/D3Q19), BGK collision, OpenFOAM FVM discretization, SIMPLE/PISO algorithms, and $k-\omega$ SST turbulence. |
 | **[02_thermal_mathematics.md](02_thermal_mathematics.md)** | Thermal & Thermodynamics | Heat diffusion equation, convective transport, Boussinesq thermal buoyancy, FTCS vs Crank-Nicolson schemes, CFL stability limits. |
 | **[03_mechanical_fea_mathematics.md](03_mechanical_fea_mathematics.md)** | Mechanical Stress & FEA | Cauchy stress tensor, infinitesimal strain, 3D Hooke's constitutive law, von Mises yield criterion, Galerkin weak-form stiffness matrix $\mathbf{K}\mathbf{u}=\mathbf{F}$. |
 | **[04_robotics_dynamics_mathematics.md](04_robotics_dynamics_mathematics.md)** | Robotics & Multibody Dynamics | $SE(3)$ Lie group kinematics, Geometric Jacobians $\mathbf{J}(\mathbf{q})$, Euler-Lagrange multibody equations $\mathbf{M}\ddot{\mathbf{q}} + \mathbf{C}\dot{\mathbf{q}} + \mathbf{g} = \boldsymbol{\tau}$, actuator PID control. |
