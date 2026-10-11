@@ -28,5 +28,12 @@
     "titleBar.inactiveBackground": "#6b1a7599",
     "titleBar.inactiveForeground": "#e7e7e799"
   },
-  "peacock.color": "#6b1a75"
+  "peacock.color": "#6b1a75",
+  "blender.executables": [
+    {
+      "name": "Blender 5.2 LTS",
+      "path": "C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe",
+      "isCustom": true
+    }
+  ]
 }
